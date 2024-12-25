@@ -18,7 +18,13 @@ class NotesController extends BaseController
      */
     public function index()
     {
-        $notes = Notes::all();
+        $userId = Auth::id();
+        $notes = Notes::where('user_id', $userId)->get();
+
+        $notes->transform(function ($note) {
+            $note->img = url($note->img); 
+            return $note;
+        });
 
         return $this->sendResponse(NotesResource::collection($notes), 'Notes retrieved successfully.');
     }
@@ -33,22 +39,23 @@ class NotesController extends BaseController
         $input = $request->all();
         $input['user_id'] = Auth::id();
 
-        if ($request->hasFile('img')) {
-            $imagePath = $request->file('img')->store('images', 'public');
-            $input['img'] = "/storage/{$imagePath}";
-        }
-
+        
         $validator = Validator::make($input, [
             'img' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg',
             'title' => 'required',
             'body' => 'required'
         ]);
-
-
+        
+        
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-
+        
+        if ($request->hasFile('img')) {
+            $imagePath = $request->file('img')->store('images', 'public');
+            $input['img'] = "/storage/{$imagePath}";
+        }
+        
         $notes = Notes::create($input);
 
         return $this->sendResponse(new NotesResource($notes), 'Notes created successfully.');
@@ -64,9 +71,19 @@ class NotesController extends BaseController
     {
         $notes = Notes::find($id);
 
+        
         if (is_null($notes)) {
             return $this->sendError('Notes not found.');
         }
+
+        if ($notes->user_id !== Auth::id()) {
+            return $this->sendError('Unauthorized.', [], 403);
+        }
+        
+        $notes->transform(function ($note) {
+            $note->img = url($note->img); 
+            return $note;
+        });
 
         return $this->sendResponse(new NotesResource($notes), 'Notes retrieved successfully.');
     }
@@ -78,15 +95,13 @@ class NotesController extends BaseController
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)  // Change parameter to $id
+    public function update(Request $request, $id) 
     {
-        $notes = Notes::find($id);  // Find the note first
+        $notes = Notes::find($id); 
 
-        if (!$notes) {
+        if (is_null($notes)) {
             return $this->sendError('Notes not found.');
         }
-
-        // Check if the user owns this note
         if ($notes->user_id !== Auth::id()) {
             return $this->sendError('Unauthorized.', [], 403);
         }
@@ -94,9 +109,9 @@ class NotesController extends BaseController
         $input = $request->all();
 
         $validator = Validator::make($input, [
-            'img' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg',
-            'title' => 'required',
-            'body' => 'required'
+            'img' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg', 
+            'title' => 'sometimes', 
+            'body' => 'sometimes' 
         ]);
 
         if ($validator->fails()) {
@@ -107,9 +122,14 @@ class NotesController extends BaseController
             $imagePath = $request->file('img')->store('images', 'public');
             $notes->img = "/storage/{$imagePath}";
         }
+        
+        if (isset($input['title'])) {
+            $notes->title = $input['title'];
+        }
+        if (isset($input['body'])) { 
+            $notes->body = $input['body'];
+        }
 
-        $notes->title = $input['title'];
-        $notes->body = $input['body'];
         $notes->save();
 
         return $this->sendResponse(new NotesResource($notes), 'Notes updated successfully.');
@@ -125,7 +145,7 @@ class NotesController extends BaseController
     {
         $notes = Notes::find($id);
 
-        if (!$notes) {
+        if (is_null($notes)) {
             return $this->sendError('Notes not found.');
         }
 
@@ -137,4 +157,5 @@ class NotesController extends BaseController
 
         return $this->sendResponse([], 'Notes deleted successfully.');
     }
+
 }
