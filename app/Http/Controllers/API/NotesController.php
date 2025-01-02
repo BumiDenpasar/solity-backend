@@ -19,7 +19,7 @@ class NotesController extends BaseController
     public function index()
     {
         $userId = Auth::id();
-        $notes = Notes::where('user_id', $userId)->get();
+        $notes = Notes::where('user_id', $userId)->orderBy('updated_at', 'desc')->get();
 
         $notes->transform(function ($note) {
             $note->img = url($note->img); 
@@ -79,11 +79,8 @@ class NotesController extends BaseController
         if ($notes->user_id !== Auth::id()) {
             return $this->sendError('Unauthorized.', [], 403);
         }
-        
-        $notes->transform(function ($note) {
-            $note->img = url($note->img); 
-            return $note;
-        });
+
+        $notes->img = url($notes->img); 
 
         return $this->sendResponse(new NotesResource($notes), 'Notes retrieved successfully.');
     }
