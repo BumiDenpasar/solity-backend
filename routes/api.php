@@ -14,5 +14,6 @@ Route::controller(AuthController::class)->group(function(){
 Route::middleware('auth:sanctum')->group( function () {
     Route::resource('notes', NotesController::class);
     Route::get('user', action: [AuthController::class, 'getCurrentUser'])->name('getCurrentUser');
+    Route::get(uri: 'verify-token', action: [AuthController::class, 'verifyToken'])->name('verifyToken');
     Route::put('profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');
 });

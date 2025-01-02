@@ -108,6 +108,11 @@ class AuthController extends BaseController
         return $this->sendResponse([], 'User logged out successfully.');
     }
 
+    public function verifyToken(Request $request)
+    {
+        return response()->json(['valid' => true]);
+    }
+
     public function getCurrentUser()
     {
         $user = Auth::user(); 
